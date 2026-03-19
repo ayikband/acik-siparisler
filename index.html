@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ayık Band - Açık Sipariş Paneli</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <header class="dashboard-header">
+        <div class="header-left">
+            <img src="https://www.konveyorbant.com/wp-content/themes/ayik-band/assets/image/logo/logo2.svg"
+                alt="Ayık Band Logo" class="logo">
+            <div class="brand-text">
+                <h1>Açık Sipariş Paneli</h1>
+                <span class="subtitle">Bekleyen İşler ve Pipeline</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <button id="exportPdfBtn" class="btn btn-primary" style="margin-right: 10px;">
+                PDF İndir
+            </button>
+            <button id="ratesBtn" class="btn btn-secondary">
+                Döviz Kurları
+            </button>
+        </div>
+    </header>
+
+    <div id="uploadOverlay" class="upload-overlay">
+        <div class="upload-card">
+            <h2>Açık Sipariş Verilerini Yükle</h2>
+            <p>Bekleyen siparişlerinizi analiz etmek için güncel Excel dosyanızı yükleyin.</p>
+            <label for="fileInput" class="upload-area">
+                <span class="icon">📂</span>
+                <span class="text">.xlsx Dosyası Seçmek İçin Tıklayın</span>
+            </label>
+            <input type="file" id="fileInput" accept=".xlsx, .xls" hidden>
+            <p class="file-status" id="uploadStatus">Dosya seçilmedi</p>
+        </div>
+    </div>
+
+    <main id="mainDashboard" class="hidden">
+
+        <section class="filter-bar">
+            <div class="filter-group">
+                <select id="filterMonth">
+                    <option value="">Tüm Aylar (Sipariş T.)</option>
+                </select>
+                <select id="filterRep">
+                    <option value="">Tüm Temsilciler</option>
+                </select>
+                <select id="filterSender">
+                    <option value="">Tüm Teklif Verenler</option>
+                </select>
+                <select id="filterSector">
+                    <option value="">Tüm Sektörler</option>
+                </select>
+                <select id="filterCity">
+                    <option value="">Tüm Şehirler</option>
+                </select>
+            </div>
+            <div class="filter-actions">
+                <div class="search-wrapper">
+                    <input type="text" id="custSearch" placeholder="Müşteri Ara...">
+                </div>
+                <button id="resetFiltersBtn" class="btn btn-outline">Sıfırla</button>
+            </div>
+        </section>
+
+        <section class="kpi-grid">
+            <div class="card kpi-card">
+                <h3>Toplam Açık Sipariş</h3>
+                <div class="value primary" id="kpiTotalEur">--</div>
+            </div>
+            <div class="card kpi-card">
+                <h3>Orijinal Döviz Toplamları</h3>
+                <div id="kpiCurrencyBreakdown" style="margin-top: 10px;">
+                </div>
+            </div>
+            <div class="card kpi-card">
+                <h3>Açık Sipariş / Müşteri</h3>
+                <div class="value" id="kpiOrderCount">--</div>
+                <div class="subtext" id="kpiCustomerCount">Bekleyen Müşteri: --</div>
+            </div>
+            <div class="card kpi-card">
+                <h3>Sektörel Dağılım</h3>
+                <div class="chart-with-legend">
+                    <div class="mini-chart-wrapper">
+                        <canvas id="kpiChartSector"></canvas>
+                    </div>
+                    <div id="kpiLegendSector" class="custom-legend small"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="charts-grid">
+            <div class="card chart-card wide">
+                <div class="chart-header">
+                    <h3>Açık Sipariş Trendi</h3>
+                    <div class="toggle-wrapper">
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" id="weeklyToggle"> Haftalık Görünüm
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" id="cumulativeToggle" checked> Kümülatif (Birikimli)
+                        </label>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chartTrend"></canvas>
+                </div>
+            </div>
+
+            <div class="card chart-card">
+                <h3>Temsilci Bazlı Açık Sipariş (EUR Karşılığı)</h3>
+                <div class="chart-container">
+                    <canvas id="chartRep"></canvas>
+                </div>
+            </div>
+
+            <div class="card chart-card">
+                <h3>Bölgesel Dağılım (Şehir)</h3>
+                <div class="chart-container">
+                    <canvas id="chartCity"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="table-section">
+            <div class="card">
+                <div class="table-header-row">
+                    <h3>Açık Sipariş Listesi</h3>
+                    <div class="pagination-controls">
+                        Satır:
+                        <select id="rowsPerPage">
+                            <option value="10">10</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span id="pageInfo">1-25 / --</span>
+                        <button id="prevPageFn" class="btn-sm">‹</button>
+                        <button id="nextPageFn" class="btn-sm">›</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table id="detailTable">
+                        <thead>
+                            <tr>
+                                <th data-sort="date">Sipariş Tarihi ⬍</th>
+                                <th data-sort="orderNo">Sipariş No ⬍</th>
+                                <th data-sort="customer">Müşteri ⬍</th>
+                                <th>Malzeme / Cinsi</th>
+                                <th data-sort="rep">Temsilci ⬍</th>
+                                <th data-sort="sector">Sektör ⬍</th>
+                                <th class="text-right">Bakiye (Orijinal)</th>
+                                <th data-sort="netEur" class="text-right">Tahmini EUR Bakiye ⬍</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="ratesModal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Güncel Döviz Kurları (EUR Çarpanı)</h3>
+                <button class="close-modal" id="closeRatesBtn">×</button>
+            </div>
+            <div class="modal-body">
+                <p class="hint">Açık siparişlerin toplam değerini anlık olarak tek bir EUR tutarında görmek için güncel
+                    kurları girin.</p>
+                <div class="targets-list">
+                    <div class="target-item">
+                        <label>EUR / USD</label>
+                        <input type="number" step="0.0001" id="rateUSD" placeholder="ör: 1.08">
+                    </div>
+                    <div class="target-item">
+                        <label>EUR / GBP</label>
+                        <input type="number" step="0.0001" id="rateGBP" placeholder="ör: 0.85">
+                    </div>
+                    <div class="target-item">
+                        <label>EUR / TRY</label>
+                        <input type="number" step="0.01" id="rateTRY" placeholder="ör: 35.00">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="saveRatesBtn">Kurları Kaydet ve Hesapla</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
