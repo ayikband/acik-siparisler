@@ -228,6 +228,7 @@ function getCalculatedEurValue(row) {
 function updateDashboard() {
     renderKPIs();
     renderCharts();
+    renderRankings();
     sortData();
     renderTable();
 }
@@ -473,6 +474,62 @@ function generateLegend(containerId, items) {
     });
 }
 
+function renderRankings() {
+    const data = state.filteredData;
+
+    // --- 1. Top customers by total EUR value ---
+    const customerMap = {};
+    data.forEach(r => {
+        const val = getCalculatedEurValue(r);
+        if (!customerMap[r.firm]) customerMap[r.firm] = 0;
+        customerMap[r.firm] += val;
+    });
+    const topCustomers = Object.entries(customerMap)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+
+    const custContainer = document.getElementById('topCustomersList');
+    custContainer.innerHTML = '';
+    const maxCust = topCustomers[0]?.[1] || 1;
+    topCustomers.forEach(([firm, total], i) => {
+        const pct = (total / maxCust) * 100;
+        const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+        const row = document.createElement('div');
+        row.className = 'ranking-row';
+        row.innerHTML = `
+            <div class="ranking-row-fill" style="width:${pct.toFixed(1)}%"></div>
+            <span class="ranking-rank ${rankClass}">${i + 1}</span>
+            <span class="ranking-name" title="${firm}">${firm}</span>
+            <span class="ranking-amount">${FORMATTER.currency(total, 'EUR')}</span>
+        `;
+        custContainer.appendChild(row);
+    });
+
+    // --- 2. Top single orders by EUR equivalent ---
+    const topOrders = [...data]
+        .sort((a, b) => getCalculatedEurValue(b) - getCalculatedEurValue(a))
+        .slice(0, 10);
+
+    const ordersContainer = document.getElementById('topSingleOrdersList');
+    ordersContainer.innerHTML = '';
+    const maxOrder = topOrders[0] ? getCalculatedEurValue(topOrders[0]) : 1;
+    topOrders.forEach((row, i) => {
+        const val = getCalculatedEurValue(row);
+        const pct = (val / maxOrder) * 100;
+        const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+        const el = document.createElement('div');
+        el.className = 'ranking-row';
+        el.innerHTML = `
+            <div class="ranking-row-fill" style="width:${pct.toFixed(1)}%"></div>
+            <span class="ranking-rank ${rankClass}">${i + 1}</span>
+            <span class="ranking-name" title="${row.firm}">${row.firm}</span>
+            <span class="ranking-sub">${row.orderNo ? '#' + row.orderNo : ''}</span>
+            <span class="ranking-amount">${FORMATTER.currency(val, 'EUR')}</span>
+        `;
+        ordersContainer.appendChild(el);
+    });
+}
+
 function getISOWeekNumber(d) {
     d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
@@ -497,6 +554,10 @@ async function exportDashboardToPDF() {
         if (filterBar) filterBar.style.display = 'none';
         if (tableControls) tableControls.style.display = 'none';
         if (tableSection) tableSection.style.display = 'none'; // Tabloyu gizle
+
+        // Expand ranking lists so nothing is clipped by max-height/overflow
+        const rankingLists = document.querySelectorAll('.ranking-list');
+        rankingLists.forEach(el => { el.style.maxHeight = 'none'; el.style.overflow = 'visible'; });
 
         // 2. Özel Kurumsal PDF Başlığı Oluşturma
         const printHeader = document.createElement('div');
@@ -556,6 +617,7 @@ async function exportDashboardToPDF() {
         if (filterBar) filterBar.style.display = 'flex';
         if (tableControls) tableControls.style.display = 'flex';
         if (tableSection) tableSection.style.display = 'block'; // Tabloyu geri getir
+        rankingLists.forEach(el => { el.style.maxHeight = ''; el.style.overflow = ''; });
 
         // 5. PDF Oluşturma
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
