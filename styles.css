@@ -619,3 +619,92 @@ tr:hover {
         top: 0;
     }
 }
+
+/* Ranking List Cards */
+.ranking-badge {
+    background: var(--primary);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+}
+
+.ranking-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+    overflow-y: auto;
+    max-height: 320px;
+}
+
+.ranking-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    background: var(--bg);
+    overflow: hidden;
+    font-size: 0.875rem;
+}
+
+.ranking-row-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background: rgba(31, 118, 172, 0.08);
+    border-radius: 8px;
+    transition: width 0.4s ease;
+    pointer-events: none;
+}
+
+.ranking-rank {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    color: #fff;
+    background: var(--text-muted);
+    position: relative;
+    z-index: 1;
+}
+
+.ranking-rank.gold   { background: #F1C40F; color: #333; }
+.ranking-rank.silver { background: #BDC3C7; color: #333; }
+.ranking-rank.bronze { background: #C27B3E; }
+
+.ranking-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+    color: var(--text);
+    position: relative;
+    z-index: 1;
+}
+
+.ranking-sub {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    position: relative;
+    z-index: 1;
+}
+
+.ranking-amount {
+    font-weight: 700;
+    color: var(--primary);
+    white-space: nowrap;
+    position: relative;
+    z-index: 1;
+    font-size: 0.9rem;
+}
